@@ -8,9 +8,11 @@
 #define __ADDRESS_HPP
 
 #define IP_DHCP "0.0.0.0"
+#define IP_LOOPBACK "127.0.0.1"
 #define PORT_ZERO 0
 #define LEN_ADDRESS_STR 25
 
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -22,6 +24,7 @@
 class Address {
 private: char* ip;
 		 int port;
+		 static pthread_mutex_t mutex;
 public:  Address(const char*, int);
 		 Address();
 		 Address(const Address&);
@@ -39,6 +42,14 @@ public:  Address(const char*, int);
 		 
 		 ~Address();
 };
+
+// Inizializzazione del mutex attraverso la macro apposita per
+// l'inizializzazione dei pthread_mutex statici.
+// Non viene eseguito nessun controllo degli errori.
+// Il mutex viene inizializzato a valori di default.
+// Un mutex creato in questo modo non necessita la chiamata alla
+// funzione di eliminazione.
+pthread_mutex_t Address::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Costruttore che riceve come parametro un indirizzo
 // IPv4 e una porta.
@@ -124,9 +135,16 @@ struct sockaddr_in Address::getSockaddr_in() {
 
 // Setter che imposta indirizzo e porta ricevendo come paramentro una
 // struct sockaddr_in precompilata.
+// La funzione inet_ntoa() non è thread safe: viene utilizzato un semaforo
+// per sincronizzare in mutua esclusione tutti gli oggetti di classe
+// Address che tentassero di utilizzare la funzione in contemporanea.
 void Address::setSockaddr_in(struct sockaddr_in address) {
+	// Accesso all'area critica.
+	pthread_mutex_lock(&this->mutex);
 	// inet_ntoa() rappresenta la funzione complementare a inet_aton().
 	setIp(inet_ntoa(address.sin_addr));
+	// Uscita dall'area critica.
+	pthread_mutex_unlock(&this->mutex);
 	// ntohs() rappresenta la funzione complementare a htons().
 	this->port = ntohs(address.sin_port);
 }
@@ -140,7 +158,7 @@ char* Address::toString() {
 }
 
 // Distruttore che libera la memoria dalla stringa rappresentante
-// l'indirizzo IPv4 precedentemente allocata dinamicamente.
+// l'indirizzo IPv4 precedentemente allocata dinamicamente e il 
 Address::~Address() {
 	free(this->ip);
 }

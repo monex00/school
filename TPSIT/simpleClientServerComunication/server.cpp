@@ -5,6 +5,7 @@
 
 #include "Address.hpp"
 #include "UtilExt.h"
+#include <unistd.h>
 
 #define PORT_MYSELF 7000
 #define MAX_MSG_SIZE 4096
@@ -24,9 +25,9 @@ int main(int argc, char* argv[]) {
 	// In caso di errore la funzione socket() ritorna -1.
 	if(socketId < 0) error("Error creating edpoint for comunication.", -1);
 	
-	// Creazione di un oggetto Address con risoluzione di indirizzo
-	// demandata al server DHCP e porta PORT_MYSELF.
-	Address mySelf(IP_DHCP, PORT_MYSELF);
+	// Creazione di un oggetto Address rappresentante il server stesso
+	// con indirizzo di loopback e porta PORT_MYSELF.
+	Address mySelf(IP_LOOPBACK, PORT_MYSELF);
 	
 	// Creazione di una struttura sockaddr_in tramite il metodo
 	// Address::getSockaddr_in().
@@ -54,25 +55,25 @@ int main(int argc, char* argv[]) {
 	char buffer[MAX_MSG_SIZE + 1];
 	
 	// Struttura che conterrà l'indirizzo del mittente del messaggio (il client).
-	struct sockaddr_in mittAddr;
+	struct sockaddr_in addrClient;
 	int addrLen = sizeof(struct sockaddr_in);
 	
 	// La funzione recvfrom() riceve un messaggio da un socket. 
 	// socketId -> descrittore del socket (endpoint) creato precedentemente.
 	// buffer -> buffer dove viene immagazzinata la stringa ricevuta dal client.
 	// MAX_MSG_SIZE -> lunghezza massima del messaggio (dimensione del buffer).
-	// 0 -> flag standard
-	// mittAddr -> indirizzo del mittente (client) castato a sockaddr* per 
+	// 0 -> flag standard.
+	// addrClient -> indirizzo del mittente (client) castato a sockaddr* per 
 	//             rispettare la parametrizzazione della funzione.
 	// addrLen -> lungezza della struttura passata come parametro (in questo caso
-	//            mittAddr). E' un valore di ritorno della funzione: nel caso in cui
+	//            addrClient). E' un valore di ritorno della funzione: nel caso in cui
 	//            il buffer risultasse troppo piccolo il valore ritornato in questo
 	//            parametro risulterà essere maggiore di quello passatto alla chiamata.
 	int recvfromRetVal = recvfrom(socketId,
 	                              buffer,
 	                              MAX_MSG_SIZE,
 	                              0,
-	                              (sockaddr*)&mittAddr,
+	                              (sockaddr *)&addrClient,
 	                              (socklen_t *)&addrLen);
 	                              
 	// In caso di errore la funzione recvfrom() ritorna -1. 
@@ -83,22 +84,38 @@ int main(int argc, char* argv[]) {
 	// buffer.
 	buffer[recvfromRetVal] = '\0';
 	
-	// Creazione di un oggetto Address partendo dalla struttura mittAddr inizializzata
+	// Creazione di un oggetto Address partendo dalla struttura addrClient inizializzata
 	// in recvfrom().
-	Address mittente(mittAddr);
+	Address client(addrClient);
 	
-	// Acquisizione della stringa rappresentante l'indirizzo (IPv4:porta) del mittente 
-	// (client).
-	char* mittToStr = mittente.toString();
+	// Acquisizione della stringa rappresentante l'indirizzo (IPv4:porta) del client.
+	char* clientToStr = client.toString();
 	
-	// Stampa a video delle informazioni sul mittente.
-	printf("From: %s\t\"%s\"\n", mittToStr, buffer);
+	// Stampa a video delle informazioni sul client e la stringa ricevuta.
+	printf("From: %s\t\"%s\"\n", clientToStr, buffer);
 	
-	free(mittToStr);
+	free(clientToStr);
 	
-	// Creazione messaggio da inviare al client
+	// Creazione messaggio da inviare al client.
 	char msg[] = "I'm your server";
 	
+	// La funzione sendto() viene utilizzata per inviare un messaggio ad un altro socket.
+	// socketId -> descrittore del socket (endpoint) creato precedentemente.
+	// msg -> puntatore al messaggio da inviare.
+	// strlen(msg) + 1 -> lunghezza del messaggio in byte.
+	// 0 -> flag standard.
+	// addrClient -> indirizzo del destinatario (client) castato a sockaddr* per 
+	//               rispettare la parametrizzazione della funzione.
+	// sizeof(struct sockaddr_in) -> lunghezza della struttura sockaddr puntata dal
+	//                               parametro precedente castata per rispettare
+	//                               la parametrizzazione della funzione.
+	int sendtoRetVal = sendto(socketId, msg, strlen(msg) + 1, 0, (struct sockaddr *)&addrClient, (socklen_t)sizeof(struct sockaddr_in));
+	
+	// La funzione sendto() ritorna il numero di byte inviati in caso di successo.
+	if(sendtoRetVal != strlen(msg) + 1) error("Error sending message to client", -4);
+	
+	// Chiusura del socket.
+	close(socketId);
 	       
 	return 0;
 }
