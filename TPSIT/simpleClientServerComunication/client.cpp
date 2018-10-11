@@ -7,10 +7,23 @@
 #include "UtilExt.h"
 #include <unistd.h>
 
-#define PORT_SERVER 7000
 #define MAX_MSG_SIZE 4096
 
 int main(int argc, char* argv[]) {
+
+	// Il programma riceve come parametri l'indirizzo IPv4 e la porta
+	// del server di destinazione del messaggio, anch'esso ricevuto
+	// da riga di comando
+	if(argc != 4) {
+		printf("USAGE %s SERVER_IPv4 SERVER_PORT MESSAGE", argv[0]);
+		return -1;
+	}
+	
+	// La porta ricevuta come parametro viene convertita da stringa a intero
+	int serverPort = atoi(argv[2]);
+	
+	char* serverIPv4 = argv[1];
+	char* msg = argv[3];
 
 	// La funzione socket() crea un endpoint di  comunicazione (socket)
 	// e ritorna un descrittore di file che si riferisce 
@@ -23,18 +36,15 @@ int main(int argc, char* argv[]) {
 	int socketId = socket(AF_INET, SOCK_DGRAM, 0);
 	
 	// In caso di errore la funzione socket() ritorna -1.
-	if(socketId < 0) error("Error creating edpoint for comunication.", -1);
+	if(socketId < 0) error("Error creating edpoint for comunication.", -2);
 	
 	// Creazione di un oggetto Address rappresentante il server con indirizzo 
 	// di loopback e porta PORT_SERVER.
-	Address server(IP_LOOPBACK, PORT_SERVER);
+	Address server(serverIPv4, serverPort);
 	
 	// Creazione di un oggetto Address rappresentante il server stesso
 	// con indirizzo di loopback e porta PORT_MYSELF.
 	struct sockaddr_in addrServer = server.getSockaddr_in();
-	
-	// Creazione messaggio da inviare al server.
-	char msg[] = "I'm your client";
 	
 	// La funzione sendto() viene utilizzata per inviare un messaggio ad un altro socket.
 	// socketId -> descrittore del socket (endpoint) creato precedentemente.
@@ -49,7 +59,7 @@ int main(int argc, char* argv[]) {
 	int sendtoRetVal = sendto(socketId, msg, strlen(msg) + 1, 0, (struct sockaddr*)&addrServer, (socklen_t)sizeof(struct sockaddr_in));
 	
 	// La funzione sendto() ritorna il numero di byte inviati in caso di successo.
-	if(sendtoRetVal != strlen(msg) + 1) error("Error sending message to server", -2);
+	if(sendtoRetVal != strlen(msg) + 1) error("Error sending message to server", -3);
 	
 	// Creazione di un buffer di lunghezza massima del messaggio più 1 per il
 	// carattere di fine stringa.
@@ -63,7 +73,7 @@ int main(int argc, char* argv[]) {
 	int recvRetVal = recv(socketId, buffer, MAX_MSG_SIZE, 0);
 	
 	// In caso di errore la funzione recv() ritorna -1. 
-	if(recvRetVal < 0) error("Error receving message from server.", -3);
+	if(recvRetVal < 0) error("Error receving message from server.", -4);
 	
 	// In caso di successo la funzione recv() ritorna il numero di byte ricevuti.
 	// Sulla base di ciò, per sicurezza, viene aggiunto il carattere di fine stringa al
