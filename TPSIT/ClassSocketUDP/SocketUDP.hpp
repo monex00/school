@@ -64,7 +64,7 @@ SocketUDP::SocketUDP(Address mySelf) {
 // destAddress.
 // @return true/false se la procedura ha avuto successo o meno. 
 bool SocketUDP::sendTo(Address destAddress, char* msg) {
-	bool retVal = true;
+	bool retVal = false;
 	
 	// Conversione dell'oggetto destAddress in una struttura sockaddr_in 
 	// corrispondente
@@ -83,7 +83,7 @@ bool SocketUDP::sendTo(Address destAddress, char* msg) {
 	int sendtoRetVal = sendto(socketID, msg, strlen(msg) + 1, 0, (struct sockaddr *)&destAddressSockaddr_in, (socklen_t)sizeof(struct sockaddr_in));
 	
 	// La funzione sendto() ritorna il numero di byte inviati in caso di successo.
-	if(sendtoRetVal != strlen(msg) + 1) retVal = false;
+	if(sendtoRetVal != strlen(msg) + 1) retVal = true;
 	return retVal;
 }
 
