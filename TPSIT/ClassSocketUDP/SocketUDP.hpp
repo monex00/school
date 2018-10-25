@@ -8,6 +8,7 @@
 #define __SOCKET_UDP_HPP
 
 #include "Address.hpp"
+#include <unistd.h>
 
 #define MAX_MSG_SIZE 4096
 
@@ -15,8 +16,10 @@ class SocketUDP {
 private: int socketID;
 public: SocketUDP();
 		SocketUDP(Address);
-		bool sendTo(Address, char*);
-		char* recvFrom(Address&);
+		bool sendToString(Address, char*);
+		char* recvFromString(Address&);
+		bool sendToRaw(Address, char*, int);
+		char* recvFromRaw(Address&, int*);
 		
 		~SocketUDP();
 };
@@ -63,7 +66,23 @@ SocketUDP::SocketUDP(Address mySelf) {
 // Metodo che invia una stringa msg ad un destinatario descritto nell'oggetto
 // destAddress.
 // @return true/false se la procedura ha avuto successo o meno. 
-bool SocketUDP::sendTo(Address destAddress, char* msg) {
+bool SocketUDP::sendToString(Address destAddress, char* msg) {
+	return SocketUDP::sendToRaw(destAddress, msg, strlen(msg) + 1);
+}
+
+// Metodo che ritorna una stringa ricevuta da un nodo di rete.
+// Il mittente viene indicato nell'oggetto sendAddress passato per referenza.
+// @return la stringa ricevuta, null terminata.
+char* SocketUDP::recvFromString(Address& sendAddress) {
+	int len;
+	char* msg = SocketUDP::recvFromRaw(sendAddress, &len);
+	// Per sicurezza al termine della stringa viene aggiunto il carattere di fine
+	// stringa.
+	msg[len + 1] = '\0';
+	return msg;
+}
+
+bool SocketUDP::sendToRaw(Address destAddress, char* msg, int len) {
 	bool retVal = false;
 	
 	// Conversione dell'oggetto destAddress in una struttura sockaddr_in 
@@ -80,17 +99,19 @@ bool SocketUDP::sendTo(Address destAddress, char* msg) {
 	// sizeof(struct sockaddr_in) -> lunghezza della struttura sockaddr puntata dal
 	//                               parametro precedente castata per rispettare
 	//                               la parametrizzazione della funzione.
-	int sendtoRetVal = sendto(socketID, msg, strlen(msg) + 1, 0, (struct sockaddr *)&destAddressSockaddr_in, (socklen_t)sizeof(struct sockaddr_in));
+	int sendtoRetVal = sendto(socketID, 
+							  msg, 
+							  len, 
+							  0, 
+							  (struct sockaddr *)&destAddressSockaddr_in, 
+							  (socklen_t)sizeof(struct sockaddr_in));
 	
 	// La funzione sendto() ritorna il numero di byte inviati in caso di successo.
-	if(sendtoRetVal != strlen(msg) + 1) retVal = true;
+	if(sendtoRetVal != len) retVal = true;
 	return retVal;
 }
 
-// Metodo che ritorna una stringa ricevuta da un nodo di rete.
-// Il mittente viene indicato nell'oggetto sendAddress passato per referenza.
-// @return la stringa ricevuta, null terminata.
-char* SocketUDP::recvFrom(Address& sendAddress) {
+char* SocketUDP::recvFromRaw(Address& sendAddress, int* len) {
 	// Creazione di un buffer di lunghezza massima del messaggio più 1 per il
 	// carattere di fine stringa.
 	char* buffer = (char*)malloc((MAX_MSG_SIZE + 1) * sizeof(char));
@@ -114,18 +135,22 @@ char* SocketUDP::recvFrom(Address& sendAddress) {
 	                              buffer,
 	                              MAX_MSG_SIZE,
 	                              0,
-	                              (sockaddr *)&sendAddressSockaddr_in,
+	                              (struct sockaddr *)&sendAddressSockaddr_in,
 	                              (socklen_t *)&addrLen);
 	                              
 	sendAddress.setSockaddr_in(sendAddressSockaddr_in);
 	                              
 	// In caso di errore la funzione recvfrom() ritorna -1. 
 	if(recvfromRetVal < 0) return NULL;
+	// Altrimenti ritorna il numero di byte ricevuti
+	else *len = recvfromRetVal;
 	
 	return buffer;
 }
 
-SocketUDP::~SocketUDP() {}
+SocketUDP::~SocketUDP() {
+	close(this->socketID);
+}
 
 
 #endif //__SOCKET_UDP_HPP
