@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SakilaDB customer editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Bootstrap -->
+<link href="../css/bootstrap.min.css" rel="stylesheet">
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the pagevia file:// -->
+<!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://code.jquery.com/jquery.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="../js/bootstrap.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#mainForm').submit(function(event) {
+      $.ajax({
+        type : "GET",
+        url : '../php/remove.php',
+        data : $('#mainForm').serialize(),
+        dataType : "json",
+        success : function(data) {
+          if(data['success'] === false)
+            $("#result").html("<div class='alert alert-danger' role='alert'>" + data['error']  + "</div>");
+          else if(data['success'] === true)
+            $("#result").html("<div class='alert alert-success' role='alert'>Record successfully removed</div>");
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          $("#addForm").append("<div class='alert alert-success' role='alert'>" + errorThrown + "</div>")
+        }
+      });
+      event.preventDefault();
+    });
+  });
+</script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="index.html">SakilaDB</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="add.html">Add <span class="sr-only">(current)</span></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="remove.html">Remove</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="modify.html">Modify</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="../php/show.php">Show</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+<div class="container" style="margin-top:3%">
+  <h4 style="text-align: center;margin-bottom: 4%;">Remove one customer from SakilaDB</h4>
+  <div id="removeForm">
+    <form method="get" id="mainForm">
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="inputFirstName">customer_id (key)</label>
+                <input type="text" class="form-control" id="inputCustomer_id" placeholder="XXXX" name="customer_id" required="true">
+            </div>
+        </div>
+        <div class="form-group col-md-12">
+            <button type="submit" class="btn btn-primary"  style="margin-left:auto;margin-right:auto;display:block;">Remove</button>
+        </div>
+    </form>
+  </div>
+  <div id="result">
+  </div>
+</div>
+</body>
+</html>

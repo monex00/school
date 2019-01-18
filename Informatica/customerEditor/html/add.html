@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SakilaDB customer editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Bootstrap -->
+<link href="../css/bootstrap.min.css" rel="stylesheet">
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the pagevia file:// -->
+<!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://code.jquery.com/jquery.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="../js/bootstrap.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#mainForm').submit(function(event) {
+      $.ajax({
+        type : "GET",
+        url : '../php/add.php',
+        data : $('#mainForm').serialize(),
+        dataType : "json",
+        success : function(data) {
+          if(data['success'] === false)
+            $("#result").html("<div class='alert alert-danger' role='alert'>" + data['error']  + "</div>");
+          else if(data['success'] === true) {
+            let markup = "<div class='alert alert-success' role='alert'>Record successfully added</div><table class='table table-striped'><thead class='thead-dark'><th scope='col'>customer_id</th><th scope='col'>store_id</th><th scope='col'>first_name</th><th scope='col'>last_name</th><th scope='col'>email</th><th scope='col'>address_id</th><th scope='col'>active</th><th scope='col'>create_date</th><th scope='col'>last_update</th><tbody><th scope='col'>"+ data['customer_id'] +"</th><th scope='col'>"+ data['store_id'] +"</th><th scope='col'>"+ data['first_name'] +"</th><th scope='col'>"+ data['last_name'] +"</th><th scope='col'>"+ data['email'] +"</th><th scope='col'>"+ data['address_id'] +"</th><th scope='col'>"+ data['active'] +"</th><th scope='col'>"+ data['create_date'] +"</th><th scope='col'>"+ data['last_update'] +"</th></tbody></thead></table>";
+            $("#result").html(markup);
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          $("#addForm").append("<div class='alert alert-success' role='alert'>" + errorThrown + "</div>")
+        }
+      });
+      event.preventDefault();
+    });
+  });
+</script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="index.html">SakilaDB</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item active">
+          <a class="nav-link" href="add.html">Add <span class="sr-only">(current)</span></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="remove.html">Remove</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="modify.html">Modify</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="../php/show.php">Show</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+<div class="container" style="margin-top:3%">
+  <h4 style="text-align: center;margin-bottom: 4%;">Insert one customer to SakilaDB</h4>
+  <div id="addForm">
+    <form method="get" id="mainForm">
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="inputFirstName">first_name</label>
+                <input type="text" class="form-control" id="inputFirstName" placeholder="first_name" name="first_name" required="true">
+            </div>
+            <div class="form-group col-md-6">
+                <label for="inputLastName">last_name</label>
+                <input type="text" class="form-control" id="inputLastName" placeholder="last_name" name="last_name" required="true">
+            </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+              <label for="inputEmail">email</label>
+              <input type="email" class="form-control" id="inputEmail" placeholder="email" name="email">
+          </div>
+          <div class="form-group col-md-6">
+              <label for="inputStore_id">store_id</label>
+              <input type="text" class="form-control" id="inputEmail" placeholder="XXXX" name="store_id" required="true">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+              <label for="inputAddressId">address_id</label>
+              <input type="text" class="form-control" id="inputAddressId" placeholder="XXXX" name="address_id" required="true">
+          </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+              <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="inputActive" name="active">
+                  <label class="form-check-label" for="inputActive">active</label>
+              </div>
+            </div>
+        </div>
+        <div class="form-group col-md-12">
+            <button type="submit" class="btn btn-primary"  style="margin-left:auto;margin-right:auto;display:block;">Add</button>
+        </div>
+    </form>
+    <div id="result">
+    </div>
+  </div>
+</div>
+</body>
+</html>
