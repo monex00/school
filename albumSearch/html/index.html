@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SakilaDB customer editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Bootstrap -->
+<link href="../css/bootstrap.min.css" rel="stylesheet">
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the pagevia file:// -->
+<!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://code.jquery.com/jquery.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="../js/bootstrap.min.js"></script>
+<!-- Ajax script -->
+<script>
+$(document).ready(function() {
+  $('#search').submit(function(event) {
+    $.ajax({
+      type : "GET",
+      url : '../php/search.php',
+      data : $('#search').serialize(),
+      dataType : "json",
+      success : function(data) {
+          /* Rimozione dei dati già presenti nella pagina */
+          $('#result-table').empty();
+          if(data.hasOwnProperty(0)) {
+              /* Json caricato con dati */
+              if(!data.hasOwnProperty('Error')) {
+                  /* Creazione di n tabelle per ogni album */
+                  let i = 0;
+                  data.forEach((album) => {
+                      /* Creazione delle intestazioni dei singoli album */
+                      $('#result-table').append("<table class='table table-striped' id='table-" + i + "'><thead class='thead-dark'><th colspan='2'>" + album['Title'] + "</th></thead></table>");
+
+                      /* Aggiunta delle signole tracce */
+                      let j = 0;
+                      album['Tracks'].forEach((track) => {
+                          $('#table-' + i).append("<tr><td>" + (j++) + "</td><td>" + track + "</td></tr>");
+                      })
+                      i++;
+                  });
+              } else {
+                  /* Segnalazione dell'errore */
+                  $('#result-table').append("<div class='alert alert-danger' role='alert'><h4 class='alert-heading'>Error</h4><p>Ops! Something seems to be wrong with your search!</p><hr/><p>" + data['Error']+ "</p></div>");
+              };
+        } else {
+            /* Json vuoto */
+            /* Segnalazione dell'errore */
+            $('#result-table').append("<div class='alert alert-info' role='alert'><h4 class='alert-heading'>Info</h4><p>It seems like your search produced no results.</p></div>");
+        }
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+          alert('errore' + errorThrown);
+      }
+    });
+    event.preventDefault();
+  });
+});
+</script>
+<style>
+    .container {
+        padding-top: 5%;
+    }
+
+    .table th {
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+     <nav class="navbar navbar-dark bg-dark">
+        <a class="navbar-brand" style="color:white;">Search artists in chinook</a>
+        <form class="form-inline" method="get" id="search">
+            <input class="form-control mr-sm-2" type="search" placeholder="Search Artist" aria-label="Search" name="artist">
+            <button class="btn btn-outline-info my-2 my-sm-0" type="submit">Search</button>
+        </form>
+    </nav>
+    <div class="container">
+        <div id="result-table">
+        </div>
+    </div>
+</body>
+</html>
