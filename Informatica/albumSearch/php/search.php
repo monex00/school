@@ -1,94 +1,60 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>SakilaDB customer editor</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Bootstrap -->
-<link href="../css/bootstrap.min.css" rel="stylesheet">
-<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-<!-- WARNING: Respond.js doesn't work if you view the pagevia file:// -->
-<!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-<![endif]-->
-</head>
-<body>
-     <nav class="navbar navbar-dark bg-dark">
-        <a class="navbar-brand" style="color:white;">Search artists in chinook</a>
-        <form class="form-inline" action="../php/search.php" method="get">
-            <input class="form-control mr-sm-2" type="search" placeholder="Search Artist" aria-label="Search" name="artist">
-            <button class="btn btn-outline-info my-2 my-sm-0" type="submit">Search</button>
-        </form>
-    </nav>
+<?php
+$res;
+try {
+    // Apertura della comunicazione
+    $conn = new PDO("mysql:host=localhost;dbname=chinook", "root", "");
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    <div class="container">
-    <?php
-        try {
-            $conn = new PDO("mysql:host=localhost;dbname=chinook", "root", "");
-            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Selezione degli album di un determinato gruppo
+    $sql = "SELECT Title, AlbumId
+            FROM album
+            WHERE ArtistId = (
+                SELECT ArtistId
+                FROM artist
+                WHERE Name = ?
+           )";
 
-            $sql = "SELECT Title, AlbumId
-                    FROM album 
-                    WHERE ArtistId = (
-                        SELECT ArtistId 
-                        FROM artist 
-                        WHERE Name = ?
-                   )";
+    // Esecuzione della query
+    $stmt = $conn->prepare($sql);
+    $stmt->execute([$_GET['artist']]);
 
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([$_GET['artist']]);
+    $res = array();
 
-            $i = 0;
-            while($row = $stmt->fetch()) {
-                $title = $row['Title'];
-                
-                echo
-                "
-                <table class=\"table table-striped\" style=\"margin-top: 5%\">
-                    <thead class=\"thead-dark\">
-                    <th scope=\"col\">$title</th>
-                    </thead>
-                <thead class=\"thead-light\">
-                    <th scope=\"col\">#</th>
-                    <th scope=\"col\">TrackId</th>
-                    <th scope=\"col\">Name</th>
-                </thead>
-                ";
+    // Ciclo per ciascun album
+    $i = 0;
+    while($albumRow = $stmt->fetch()) {
+        // Prelevamento dal record delle informazioni significative dell'album
+        $albumTitle = $albumRow['Title'];
+        $albumId = $albumRow['AlbumId'];
 
-                $albumId = $row['AlbumId'];
-                
-                $sql = "SELECT TrackId, Name 
-                        FROM track 
-                        WHERE AlbumId = $albumId";
+        // Aggiunta del nome dell'album al json di risultato
+        $res['Artist'] = $_GET['artist'];
+        $res['Albums'][$i]['Title'] = $albumTitle;
 
-                $pippo = $conn->prepare($sql);
-                $pippo->execute();
+        // Query di ricerca delle tracce di un determinato album
+        $sql = "SELECT TrackId, Name
+                FROM track
+                WHERE AlbumId = $albumId";
 
-                echo "<tbody>";
-                while($track = $pippo->fetch()) {
-                    echo
-                    "
-                    <tr>
-                      <th scope=\"col\">0</th>
-                      <tr scope=\"col\">$track[0]</tr>
-                      <tr scope=\"col\">$track[1]</tr>
-                    </tr>
-                    ";
-                }
+        // Esecuzione della query
+        $pippo = $conn->prepare($sql);
+        $pippo->execute();
 
-                echo "</tbody></table>";
-            }
-
-            $conn = null;
-        } catch (PDOException $e) {
-            $res = false;
-            echo $e;
+        // Ciclo per ciascuna traccia
+        $j = 0;
+        while($track = $pippo->fetch()) {
+            // Aggiunta della traccia all'album
+            $res['Albums'][$i]['Tracks'][$j] = $track['Name'];
+            $j++;
         }
-    ?>
-    </div>
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://code.jquery.com/jquery.js"></script>
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="../js/bootstrap.min.js"></script>
-</body>
-</html>
+        $i++;
+    }
+} catch (PDOException $e) {
+    $res ['Error'] = $e->getMessage();
+} catch (Exception $e) {
+    $res['Error'] = $e->getMessage();
+} finally {
+    echo json_encode($res);
+    $conn = null;
+}
+?>
