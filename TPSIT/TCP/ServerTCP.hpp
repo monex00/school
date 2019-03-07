@@ -8,13 +8,24 @@
 #include <list>
 
 class ServerTCP : protected SocketTCP {
-	private: std::list<ServerConnection*>connections;
-	public: ServerTCP();
+	private: std::list<ServerConnection*>*connections;
+			 void closeAllConnections();
+	public: ServerTCP(Address mySelf);
 			ServerConnection* accept();
-			~ServerTCP();
+			void closeConnection(ServerConnection*);
+			void sendBroadcast(char*);
 };
 
-ServerTCP::ServerTCP() : SocketTCP(){};
+ServerTCP::ServerTCP(Address mySelf) : SocketTCP(){
+	connections = new std::list<ServerConnection*>();
+	
+	struct sockaddr_in addrMySelf = mySelf.getSockaddr_in();
+	bind(socketID, (struct sockaddr *)&addrMySelf,
+	               (socklen_t)sizeof(struct sockaddr_in));
+	               
+	listen(this->socketID, 50);
+	
+};
 
 ServerConnection* ServerTCP::accept() {
 	struct sockaddr_in client;
@@ -26,16 +37,26 @@ ServerConnection* ServerTCP::accept() {
 		return NULL;
 	} else {
 		ServerConnection* newConnection = new ServerConnection(connectionID, Address(client));
-		connections.push_front(newConnection);
+		connections->push_front(newConnection);
 		return newConnection;
 	}
 }
 
-
-ServerTCP::~ServerTCP() {
-	for(ServerConnection* connection : connections) free(connection);
-	close(this->socketID);
+void ServerTCP::closeConnection(ServerConnection* connection) {
+	connections->remove(connection);
 }
 
+void ServerTCP::closeAllConnections() {
+	for (std::list<ServerConnection*>::const_iterator iterator = connections->begin(), end = connections->end(); iterator != end; ++iterator) {
+    	this->closeConnection(*iterator);
+	}
+}
+
+void ServerTCP::sendBroadcast(char* msg) {
+	// MAI TESTATO
+	for (std::list<ServerConnection*>::const_iterator iterator = connections->begin(), end = connections->end(); iterator != end; ++iterator) {
+    	(*iterator)->send(msg);
+	}
+}
 
 #endif //__SERVER_TCP_HPP

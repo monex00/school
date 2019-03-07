@@ -7,7 +7,7 @@
 
 #define MAX_MSG_SIZE 4086
 
-class ServerConnection : protected Connection {
+class ServerConnection : public Connection {
 	public: ServerConnection(int, Address);
 			~ServerConnection();
 };
