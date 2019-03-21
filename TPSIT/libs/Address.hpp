@@ -68,7 +68,8 @@ Address::Address() : Address(IP_DHCP, PORT_ZERO){}
 
 // Costruttore per copia: esegue la copia di un altro oggetto
 // della classe indirizzo.
-Address::Address(const Address& address) : Address(address.ip, address.port) {}
+Address::Address(const Address& address) : Address(address.ip, address.port) {
+}
 
 // Costruttore che riceve come parametro una struct 
 // sockaddr_in (definita in sys/socket.h) e inizializa 
