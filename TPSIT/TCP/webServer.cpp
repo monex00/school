@@ -6,7 +6,7 @@
 #define DB_PATH "db"
 
 #define MAX_LINE_LEN 1000
-#define TMP_FILE_NAME_LEN 16
+#define TMP_FILE_NAME_LEN 100
 
 #define DEFAULT_PAGE "index.html"
 
@@ -88,7 +88,7 @@ int callback(void* param, int argc, char **argv, char **azColName) {
     }
     fprintf(fp, (char*)"</tr>");
     
-    free(toWrite);
+    if(toWrite) free(toWrite);
     return 0;
 }
 
@@ -107,7 +107,7 @@ char* gdi(char* filePath) {
 	tmpFileName = (char*)malloc(TMP_FILE_NAME_LEN * sizeof(char));
 	
 	orgFile = fopen(filePath, "r");
-	sprintf(tmpFileName, "%s%d%s", DEFAULT_HTML_TMP_DIR, pthread_self(), HTML_EXT);
+	sprintf(tmpFileName, "%s%ld%s", DEFAULT_HTML_TMP_DIR, pthread_self(), HTML_EXT);
 	tmpFile = fopen(tmpFileName, "w");
 	
 	while((resRead = getline(&line, &len, orgFile)) != -1) {
@@ -123,7 +123,7 @@ char* gdi(char* filePath) {
 	fclose(orgFile);
 	fclose(tmpFile);
 	
-	if(line)free(line);
+	if(line) free(line);
 	
 	return tmpFileName;
 }
@@ -139,7 +139,7 @@ void* thread(void* arg) {
 	char* pagePath = getFilePath(pageName);
 	char* tmpFilePath;
 	
-	printf("[I] Connection established with host : %s -> %s\n[I] Request Header :\n%s\n", connection->getConnectedAddress().toString(), pageName, rqst);
+	printf("[I] Connection established with host : %s -> %s\n[I] Request Header :\n%s\n", "removed",/*connection->getConnectedAddress().toString(),*/ pageName, rqst);
 	
 	if(access(pagePath, F_OK) != -1 ) {
 		tmpFilePath = gdi(pagePath);
@@ -152,13 +152,10 @@ void* thread(void* arg) {
 		printf("[W] %s Not Found : 404 ERROR %s\n", pageName, pagePath);
 	}
 
-	free(pageName);
-	
-	//free(pagePath); ERR
-	
-	//free(tmpFilePath); ERR
-	
-	free(rqst);
+	if(pageName) free(pageName);
+	if(pagePath) free(pagePath);
+	if(tmpFilePath) free(tmpFilePath);
+	if(rqst) free(rqst);
 
 	serverSocket->closeConnection(connection);
 
@@ -173,7 +170,7 @@ char* getFileNameFromRqst(char* rqst) {
 	char* pageName;
 	pageName = strdup(splittedString);
 	
-	free(tmpRqst);
+	if(tmpRqst) free(tmpRqst);
 	
 	return pageName;
 }

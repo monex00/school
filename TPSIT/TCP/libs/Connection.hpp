@@ -11,10 +11,10 @@
 
 class Connection {
 	protected: int connectionID;
-			   Address connectedAddress;
-	public: Connection(int, Address);
+			   //Address connectedAddress;
+	public: Connection(int/*, Address*/);
 			
-			Address getConnectedAddress();
+			//Address getConnectedAddress();
 
 			bool sendFile(char*);
 			bool sendRaw(void*, int);
@@ -23,14 +23,14 @@ class Connection {
 			char* recv();
 };
 
-Connection::Connection(int connectionID, Address connectedAddress) {
+Connection::Connection(int connectionID/*, Address connectedAddress*/) {
 	this->connectionID = connectionID;
-	this->connectedAddress = connectedAddress;
+	//this->connectedAddress = connectedAddress;
 }
 
-Address Connection::getConnectedAddress() {
+/* Address Connection::getConnectedAddress() {
 	return this->connectedAddress;
-}
+} */
 
 bool Connection::sendFile(char* path) {
 	char buffer[MAX_FILE_CHUNK];

@@ -8,11 +8,11 @@
 #define MAX_MSG_SIZE 4086
 
 class ClientConnection : public Connection {
-	public: ClientConnection(int, Address);
+	public: ClientConnection(int/*, Address*/);
 			~ClientConnection();
 };
 
-ClientConnection::ClientConnection(int connectionID, Address connectedAddress) : Connection(connectionID, connectedAddress){};
+ClientConnection::ClientConnection(int connectionID/*, Address connectedAddress*/) : Connection(connectionID/*, connectedAddress*/){};
 
 ClientConnection::~ClientConnection() {
 	close(this->connectionID);

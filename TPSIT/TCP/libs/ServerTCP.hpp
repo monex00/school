@@ -39,7 +39,7 @@ ServerConnection* ServerTCP::accept() {
  	if(connectionID < 0) {
 		return NULL;
 	} else {
-		ServerConnection* newConnection = new ServerConnection(connectionID, Address(client)); // VA IN SEGMENTATIO FAULT QUA, PROBABILMETE NEL COSTRUTTORE PER COPIA
+		ServerConnection* newConnection = new ServerConnection(connectionID/*, Address(client)*/); // VA IN SEGMENTATIO FAULT QUA, PROBABILMETE NEL COSTRUTTORE PER COPIA
 		connections->push_front(newConnection);
 		return newConnection;
 	}
