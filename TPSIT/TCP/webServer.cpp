@@ -1,23 +1,29 @@
 #include "libs/ServerTCP.hpp"
 #include <sqlite3.h>
 #include <stdio.h>
+#include <regex.h>
 #include "../libs/UtilExt.h"
+
+#define PROGRAM_DESC "== WEBSERVER v1.0 ==\n\n"
 
 #define DB_PATH "db"
 
 #define MAX_LINE_LEN 1000
 #define TMP_FILE_NAME_LEN 100
 
-#define DEFAULT_PAGE "index.html"
+#define DEFAULT_PAGE "/index.html"
 
 #define SQL_TAG "<SQL"
 
-#define DEFAULT_HTML_DIR "html/"
+#define DEFAULT_HTML_DIR "html"
 #define DEFAULT_HTML_TMP_DIR "html/tmp/"
 #define HTML_EXT ".html"
 
 #define HEADER_200 "HTTP/1.1 200 OK\n\n"
 #define HEADER_404 "HTTP/1.1 404 File Not Found\n\n"
+
+#define REGEX "^GET\\s([^\\?\\*<>|]+)\\sHTTP"
+#define MAX_GROUPS 2
 
 char* getFileNameFromRqst(char* rqst);
 char* getFilePath(char* pageName);
@@ -33,24 +39,31 @@ struct thread_params {
 
 int main(int argc, char* argv[]) {
 
+	// In caso di parametri sbagliati viene segnalato l'errore
+	// all'utente
 	if(argc != 2) {
 		printf("USAGE: %s PORT\n", argv[0]);
 		return -1;
 	}
 	
+	printf(PROGRAM_DESC);
+	
+	// Conversione della porta in intero
 	int port = atoi(argv[1]);
 
+	// Apertura del socket
 	Address mySelf(IP_LOOPBACK, port);
 	ServerTCP serverSocket(mySelf);
-
+	
+	// Ciclo infinito
 	while(true) {
+		// Apertura della connessione
 		ServerConnection* connection = serverSocket.accept();
 		struct thread_params params;
 		params.serverSocket = &serverSocket;
 		params.connection = connection;
 		pthread_t thid;
 		pthread_create(&thid, NULL, thread, (void*)&params);
-		//pthread_join(thid, NULL);	
 	}
 
 }
@@ -58,10 +71,9 @@ int main(int argc, char* argv[]) {
 void generateHTMLFromQuery(char* query, FILE* fp) {
 	sqlite3 *db;
 	sqlite3_stmt* res;
-	char* err_msg;
+	char* err_msg = NULL;
 	
 	fprintf(fp, (char*)"<table border=\"1\">");
-	
 	sqlite3_open((char*)DB_PATH, &db);
 	sqlite3_exec(db, query, callback, (void*)fp, &err_msg);
 	sqlite3_close(db);
@@ -93,12 +105,12 @@ int callback(void* param, int argc, char **argv, char **azColName) {
 }
 
 char* gdi(char* filePath) {	
-	FILE* orgFile;
-	FILE* tmpFile;
-	char* line;
-	char* occ;
-	char* query;
-	char* tmpFileName;
+	FILE* orgFile = NULL;
+	FILE* tmpFile = NULL;
+	char* line = NULL;
+	char* occ = NULL;
+	char* query = NULL;
+	char* tmpFileName = NULL;
 	size_t len;
 	ssize_t resRead;
 	
@@ -122,8 +134,7 @@ char* gdi(char* filePath) {
 	
 	fclose(orgFile);
 	fclose(tmpFile);
-	
-	if(line) free(line);
+	free(line);
 	
 	return tmpFileName;
 }
@@ -137,25 +148,25 @@ void* thread(void* arg) {
 	char* rqst = connection->recv();
 	char* pageName = getFileNameFromRqst(rqst);
 	char* pagePath = getFilePath(pageName);
-	char* tmpFilePath;
+	char* tmpFilePath = NULL;
 	
-	printf("[I] Connection established with host : %s -> %s\n[I] Request Header :\n%s\n", "removed",/*connection->getConnectedAddress().toString(),*/ pageName, rqst);
+	printf("[I] Connection established with host -> %s\n[I] Request Header :\n%s\n",/*connection->getConnectedAddress().toString(),*/ pageName, rqst);
 	
-	if(access(pagePath, F_OK) != -1 ) {
+	if(access(pagePath, R_OK) != -1) {
 		tmpFilePath = gdi(pagePath);
     	connection->sendRaw((char*)HEADER_200, strlen((char*)HEADER_200));
-		connection->sendFile((char*)tmpFilePath);
+    	connection->sendFile((char*)tmpFilePath);
 		printf("[I] Sent %s page\n", pagePath);
 	} else {
     	connection->sendRaw((char*)HEADER_404, strlen((char*)HEADER_404));
 		connection->sendFile((char*)"html/404.html");
-		printf("[W] %s Not Found : 404 ERROR %s\n", pageName, pagePath);
+		printf("[W] %s Not Found : 404 ERROR %s %s\n", pageName, pagePath, strerror(errno));
 	}
 
-	if(pageName) free(pageName);
-	if(pagePath) free(pagePath);
-	if(tmpFilePath) free(tmpFilePath);
-	if(rqst) free(rqst);
+	free(pageName);
+	free(pagePath);
+	free(tmpFilePath);
+	free(rqst);
 
 	serverSocket->closeConnection(connection);
 
@@ -163,16 +174,28 @@ void* thread(void* arg) {
 }
 
 char* getFileNameFromRqst(char* rqst) {
-	char* tmpRqst = strdup(rqst);
-	char* splittedString = strtok(tmpRqst, "/");
-	splittedString = strtok(NULL, " ");
 	
-	char* pageName;
-	pageName = strdup(splittedString);
+	regex_t regex;
+	regmatch_t groupArray[MAX_GROUPS];
+	char* fileName = NULL;
 	
-	if(tmpRqst) free(tmpRqst);
+	int ret = regcomp(&regex, REGEX, REG_EXTENDED);
+	if(!ret) {
+		ret = regexec(&regex, rqst, MAX_GROUPS, groupArray, 0);
+		if(!ret) {
+		    char sourceCopy[(strlen(rqst) + 1) * sizeof(char)];
+		    strcpy(sourceCopy, rqst);
+		    sourceCopy[groupArray[1].rm_eo] = '\0';
+		   
+		    if(strcmp(sourceCopy + groupArray[1].rm_so, "/") != 0)
+		    	fileName = strdup(sourceCopy + groupArray[1].rm_so);
+		    else
+		    	fileName = strdup(DEFAULT_PAGE);	
+		}
+	}
 	
-	return pageName;
+	regfree(&regex);
+	return fileName;
 }
 
 char* getFilePath(char* pageName) {
