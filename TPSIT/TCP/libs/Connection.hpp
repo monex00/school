@@ -45,7 +45,7 @@ bool Connection::sendFile(char* path) {
 	}
 	
 	close(fd);
-	return (nBytes == 0) ? true : false;
+	return nBytes == 0;
 }
 
 bool Connection::sendRaw(void* msg, int len) {
@@ -70,7 +70,8 @@ void* Connection::recvRaw(int* len) {
 char* Connection::recv() {
 	int len;
 	char* msg = (char*)this->recvRaw(&len);
-	msg[len + 1] = '\0';
+	if(msg == NULL) return  NULL;
+	msg[len + 1] = '\0'; //SIGSEGV
 	return msg;
 }
 
